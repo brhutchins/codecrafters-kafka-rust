@@ -1,3 +1,4 @@
+use codecrafters_kafka::{kafka_request::KafkaRequest, kafka_response::KafkaResponse};
 use std::io::prelude::*;
 use std::net::{TcpListener, TcpStream};
 
@@ -21,12 +22,22 @@ fn main() {
 }
 
 fn handle_stream(mut stream: TcpStream) {
-    let message_size: i32 = 0;
-    let correlation_id: i32 = 7;
-    let response: Vec<u8> = [message_size, correlation_id]
-        .iter()
-        .flat_map(|&v| v.to_be_bytes())
-        .collect();
+    let mut buffer = [0; 39];
+    stream
+        .read_exact(&mut buffer[..])
+        .expect("Failed to read stream");
+    let request: KafkaRequest = buffer[..].try_into().expect("Failed to parse KafkaRequest");
+    println!("{:?}", request);
 
-    stream.write_all(&response).unwrap();
+    let message_size: i32 = 10;
+    let response = KafkaResponse {
+        message_size,
+        correlation_id: request.correlation_id,
+    };
+
+    println!("{:?}", response);
+
+    let response_bytes: Vec<u8> = response.into();
+
+    stream.write_all(&response_bytes).unwrap();
 }
