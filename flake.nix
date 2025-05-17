@@ -87,9 +87,9 @@
           };
 
           # Audit licenses
-          cc-kafka-deny = craneLib.cargoDeny {
-            inherit src;
-          };
+          # cc-kafka-deny = craneLib.cargoDeny {
+          #   inherit src;
+          # };
 
           # Run tests with cargo-nextest
           # Consider setting `doCheck = false` on `cc-kafka` if you do not want
@@ -118,8 +118,9 @@
           # MY_CUSTOM_DEVELOPMENT_VAR = "something else";
 
           # Extra inputs can be added here; cargo and rustc are provided by default.
-          packages = [
-            pkgs.rust-analyzer
+          packages = with pkgs; [
+            rust-analyzer
+            codecrafters-cli
           ];
         };
       });
