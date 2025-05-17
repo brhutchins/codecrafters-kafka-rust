@@ -1,4 +1,7 @@
-use codecrafters_kafka::{kafka_request::KafkaRequest, kafka_response::KafkaResponse};
+use codecrafters_kafka::{
+    api_versions::ApiVersion, errors::KafkaError, kafka_request::KafkaRequest,
+    kafka_response::KafkaResponse,
+};
 use std::io::prelude::*;
 use std::net::{TcpListener, TcpStream};
 
@@ -30,9 +33,18 @@ fn handle_stream(mut stream: TcpStream) {
     println!("{:?}", request);
 
     let message_size: i32 = 10;
+    let mut error_code: i16 = 0;
+
+    match handle_request(&request) {
+        Ok(v) => v,
+        Err(err) => {
+            error_code = err.code();
+        }
+    };
     let response = KafkaResponse {
         message_size,
         correlation_id: request.correlation_id,
+        error_code,
     };
 
     println!("{:?}", response);
@@ -40,4 +52,9 @@ fn handle_stream(mut stream: TcpStream) {
     let response_bytes: Vec<u8> = response.into();
 
     stream.write_all(&response_bytes).unwrap();
+}
+
+fn handle_request(request: &KafkaRequest) -> Result<(), KafkaError> {
+    let _api_version: ApiVersion = request.request_api_version.try_into()?;
+    Ok(())
 }

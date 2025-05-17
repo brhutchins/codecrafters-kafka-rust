@@ -1,4 +1,8 @@
+pub mod api_versions;
+pub mod errors;
+
 pub mod kafka_request {
+    use crate::api_versions::ApiVersionError;
     use std::array::TryFromSliceError;
     use std::convert::TryFrom;
     use thiserror::Error;
@@ -7,6 +11,9 @@ pub mod kafka_request {
     pub enum KafkaRequestError {
         #[error("unreadable bytestream")]
         UnreadableBytestream(#[from] TryFromSliceError),
+
+        #[error("unsupported version")]
+        UnsupportedVersionError(#[from] ApiVersionError),
     }
 
     #[derive(Debug)]
@@ -45,14 +52,16 @@ pub mod kafka_response {
     pub struct KafkaResponse {
         pub message_size: i32,
         pub correlation_id: i32,
+        pub error_code: i16,
     }
 
     impl From<KafkaResponse> for Vec<u8> {
         fn from(val: KafkaResponse) -> Self {
-            [val.message_size, val.correlation_id]
-                .iter()
-                .flat_map(|&v| v.to_be_bytes())
-                .collect()
+            let mut stream: Vec<u8> = Vec::new();
+            stream.extend(val.message_size.to_be_bytes());
+            stream.extend(val.correlation_id.to_be_bytes());
+            stream.extend(val.error_code.to_be_bytes());
+            stream
         }
     }
 }
