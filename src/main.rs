@@ -1,6 +1,11 @@
 use codecrafters_kafka::{
-    api_versions::ApiVersion, errors::KafkaError, kafka_request::KafkaRequest,
-    kafka_response::KafkaResponse,
+    api_versions,
+    api_versions::ApiVersion,
+    errors::KafkaError,
+    kafka_request::KafkaRequest,
+    kafka_response::{
+        KafkaResponse, KafkaResponseBody, KafkaResponseHeader, KafkaResponseHeaderV0,
+    },
 };
 use std::io::prelude::*;
 use std::net::{TcpListener, TcpStream};
@@ -25,31 +30,47 @@ fn main() {
 }
 
 fn handle_stream(mut stream: TcpStream) {
-    let mut buffer = [0; 39];
+    let mut message_size_buffer = [0; 4];
+    stream
+        .read_exact(&mut message_size_buffer)
+        .expect("Failed to read stream");
+    let message_size = i32::from_be_bytes(
+        message_size_buffer[..]
+            .try_into()
+            .expect("Failed to get message size"),
+    );
+    let mut buffer = vec![0u8; message_size.try_into().expect("usize smaller than i32")];
     stream
         .read_exact(&mut buffer[..])
         .expect("Failed to read stream");
     let request: KafkaRequest = buffer[..].try_into().expect("Failed to parse KafkaRequest");
     println!("{:?}", request);
 
-    let message_size: i32 = 10;
     let mut error_code: i16 = 0;
 
     match handle_request(&request) {
         Ok(v) => v,
         Err(err) => {
+            println!("{:?}", err);
             error_code = err.code();
         }
     };
-    let response = KafkaResponse {
-        message_size,
+    let response_header = KafkaResponseHeaderV0 {
         correlation_id: request.correlation_id,
-        error_code,
     };
 
-    println!("{:?}", response);
+    let response_body = api_versions::api::ResponseBody::new(error_code);
+
+    let response = KafkaResponse {
+        header: KafkaResponseHeader::KafkaResponseHeaderV0(response_header),
+        body: KafkaResponseBody::ApiVersions(response_body),
+    };
+
+    println!("Response: {:?}", response);
 
     let response_bytes: Vec<u8> = response.into();
+
+    println!("Response bytes: {:02x?}", response_bytes);
 
     stream.write_all(&response_bytes).unwrap();
 }
