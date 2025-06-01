@@ -4,4 +4,5 @@ use strum::FromRepr;
 #[derive(Copy, Clone, Debug, FromRepr)]
 pub enum ApiKey {
     ApiVersions = 18,
+    DescribeTopicPartitions = 75,
 }

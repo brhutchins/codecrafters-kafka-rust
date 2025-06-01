@@ -70,7 +70,10 @@ impl ApiVersionInfo {
     }
 }
 
-pub static API_VERSIONS: [ApiVersionInfo; 1] = [ApiVersionInfo::new(ApiKey::ApiVersions, 4, 4)];
+pub static API_VERSIONS: [ApiVersionInfo; 2] = [
+    ApiVersionInfo::new(ApiKey::ApiVersions, 0, 4),
+    ApiVersionInfo::new(ApiKey::DescribeTopicPartitions, 0, 4),
+];
 
 pub mod api {
     use super::*;
