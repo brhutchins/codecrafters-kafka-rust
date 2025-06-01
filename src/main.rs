@@ -9,6 +9,7 @@ use codecrafters_kafka::{
 };
 use std::io::prelude::*;
 use std::net::{TcpListener, TcpStream};
+use std::thread;
 
 fn main() {
     // You can use print statements as follows for debugging, they'll be visible when running tests.
@@ -20,7 +21,9 @@ fn main() {
         match stream {
             Ok(stream) => {
                 println!("accepted new connection");
-                let _ = handle_stream(stream);
+                thread::spawn(|| {
+                    let _ = handle_stream(stream);
+                });
             }
             Err(e) => {
                 println!("error: {}", e);
@@ -35,7 +38,10 @@ fn handle_stream(mut stream: TcpStream) -> std::io::Result<()> {
     loop {
         let mut read_buffer = [0u8; 4096];
         match stream.read(&mut read_buffer) {
-            Ok(0) => break,
+            Ok(0) => {
+                println!("Client closed the connection");
+                break;
+            }
             Ok(n) => buffer.extend_from_slice(&read_buffer[..n]),
             Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => continue,
             Err(e) => return Err(e),
@@ -49,6 +55,7 @@ fn handle_stream(mut stream: TcpStream) -> std::io::Result<()> {
             if buffer.len() < total_length {
                 // If we haven't receive the whole message yet, we'll break to the next iteration
                 // of the loop, and try again.
+                println!("Haven't received full message. Looping again");
                 break;
             }
 
